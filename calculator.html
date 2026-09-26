@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Calculator</title>
+<style>
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: 'Segoe UI', Arial, sans-serif;
+    background: linear-gradient(135deg, #1e293b, #0f172a);
+    height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .calculator {
+    width: 320px;
+    background: #111827;
+    border-radius: 20px;
+    box-shadow: 0 20px 50px rgba(0,0,0,0.5);
+    padding: 20px;
+  }
+  .display {
+    background: #0f172a;
+    border-radius: 12px;
+    padding: 20px 16px;
+    margin-bottom: 16px;
+    text-align: right;
+    overflow: hidden;
+  }
+  .display .prev {
+    color: #94a3b8;
+    font-size: 16px;
+    min-height: 20px;
+    word-wrap: break-word;
+  }
+  .display .current {
+    color: #ffffff;
+    font-size: 36px;
+    font-weight: 600;
+    min-height: 44px;
+    word-wrap: break-word;
+  }
+  .buttons {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 10px;
+  }
+  button {
+    border: none;
+    border-radius: 12px;
+    padding: 18px 0;
+    font-size: 18px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: transform 0.05s ease, filter 0.15s ease;
+  }
+  button:active {
+    transform: scale(0.95);
+  }
+  .num {
+    background: #1f2937;
+    color: #ffffff;
+  }
+  .num:hover { filter: brightness(1.2); }
+  .op {
+    background: #2563eb;
+    color: white;
+  }
+  .op:hover { filter: brightness(1.15); }
+  .func {
+    background: #374151;
+    color: #e2e8f0;
+  }
+  .func:hover { filter: brightness(1.2); }
+  .equals {
+    background: #16a34a;
+    color: white;
+    grid-column: span 2;
+  }
+  .equals:hover { filter: brightness(1.15); }
+  .zero {
+    grid-column: span 2;
+  }
+</style>
+</head>
+<body>
+
+<div class="calculator">
+  <div class="display">
+    <div class="prev" id="prevDisplay"></div>
+    <div class="current" id="currentDisplay">0</div>
+  </div>
+  <div class="buttons">
+    <button class="func" onclick="clearAll()">AC</button>
+    <button class="func" onclick="deleteLast()">DEL</button>
+    <button class="func" onclick="percent()">%</button>
+    <button class="op" onclick="chooseOperation('/')">÷</button>
+
+    <button class="num" onclick="appendNumber('7')">7</button>
+    <button class="num" onclick="appendNumber('8')">8</button>
+    <button class="num" onclick="appendNumber('9')">9</button>
+    <button class="op" onclick="chooseOperation('*')">×</button>
+
+    <button class="num" onclick="appendNumber('4')">4</button>
+    <button class="num" onclick="appendNumber('5')">5</button>
+    <button class="num" onclick="appendNumber('6')">6</button>
+    <button class="op" onclick="chooseOperation('-')">−</button>
+
+    <button class="num" onclick="appendNumber('1')">1</button>
+    <button class="num" onclick="appendNumber('2')">2</button>
+    <button class="num" onclick="appendNumber('3')">3</button>
+    <button class="op" onclick="chooseOperation('+')">+</button>
+
+    <button class="num zero" onclick="appendNumber('0')">0</button>
+    <button class="num" onclick="appendNumber('.')">.</button>
+    <button class="equals" onclick="calculate()">=</button>
+  </div>
+</div>
+
+<script>
+let currentInput = '0';
+let previousInput = '';
+let operation = null;
+let shouldResetScreen = false;
+
+const currentDisplay = document.getElementById('currentDisplay');
+const prevDisplay = document.getElementById('prevDisplay');
+
+function updateDisplay() {
+  currentDisplay.textContent = currentInput;
+  prevDisplay.textContent = previousInput
+    ? `${previousInput} ${operationSymbol(operation)}`
+    : '';
+}
+
+function operationSymbol(op) {
+  switch (op) {
+    case '/': return '÷';
+    case '*': return '×';
+    case '-': return '−';
+    case '+': return '+';
+    default: return '';
+  }
+}
+
+function appendNumber(number) {
+  if (shouldResetScreen) {
+    currentInput = '';
+    shouldResetScreen = false;
+  }
+  if (number === '.' && currentInput.includes('.')) return;
+  if (currentInput === '0' && number !== '.') {
+    currentInput = number;
+  } else {
+    currentInput += number;
+  }
+  updateDisplay();
+}
+
+function chooseOperation(op) {
+  if (currentInput === '') return;
+  if (previousInput !== '') {
+    calculate();
+  }
+  operation = op;
+  previousInput = currentInput;
+  shouldResetScreen = true;
+  updateDisplay();
+}
+
+function calculate() {
+  let result;
+  const prev = parseFloat(previousInput);
+  const current = parseFloat(currentInput);
+  if (isNaN(prev) || isNaN(current)) return;
+
+  switch (operation) {
+    case '+':
+      result = prev + current;
+      break;
+    case '-':
+      result = prev - current;
+      break;
+    case '*':
+      result = prev * current;
+      break;
+    case '/':
+      result = current === 0 ? 'Error' : prev / current;
+      break;
+    default:
+      return;
+  }
+
+  currentInput = (result === 'Error') ? 'Error' : roundResult(result).toString();
+  operation = null;
+  previousInput = '';
+  shouldResetScreen = true;
+  updateDisplay();
+}
+
+function percent() {
+  const current = parseFloat(currentInput);
+  if (isNaN(current)) return;
+
+  if (previousInput !== '' && operation) {
+    // e.g. 200 + 10% => 200 + (10% of 200)
+    const prev = parseFloat(previousInput);
+    currentInput = roundResult((prev * current) / 100).toString();
+  } else {
+    currentInput = roundResult(current / 100).toString();
+  }
+  updateDisplay();
+}
+
+function roundResult(num) {
+  return Math.round((num + Number.EPSILON) * 1e10) / 1e10;
+}
+
+function clearAll() {
+  currentInput = '0';
+  previousInput = '';
+  operation = null;
+  updateDisplay();
+}
+
+function deleteLast() {
+  if (currentInput.length === 1) {
+    currentInput = '0';
+  } else {
+    currentInput = currentInput.slice(0, -1);
+  }
+  updateDisplay();
+}
+
+// keyboard support
+document.addEventListener('keydown', (e) => {
+  if (e.key >= '0' && e.key <= '9') appendNumber(e.key);
+  else if (e.key === '.') appendNumber('.');
+  else if (e.key === '+') chooseOperation('+');
+  else if (e.key === '-') chooseOperation('-');
+  else if (e.key === '*') chooseOperation('*');
+  else if (e.key === '/') { e.preventDefault(); chooseOperation('/'); }
+  else if (e.key === '%') percent();
+  else if (e.key === 'Enter' || e.key === '=') calculate();
+  else if (e.key === 'Backspace') deleteLast();
+  else if (e.key === 'Escape') clearAll();
+});
+
+updateDisplay();
+</script>
+
+</body>
+</html>
